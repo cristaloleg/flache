@@ -6,7 +6,8 @@ import (
 )
 
 const (
-	shardsNum  = uint64(1 << 10)
+	shardsLog  = uint64(10)
+	shardsNum  = 1 << shardsLog
 	shardsMask = shardsNum - 1
 )
 
@@ -16,17 +17,17 @@ type entry struct {
 	Value      interface{}
 }
 
-// Flache a concurrent, sharded and flexible cache
-type Flache struct {
+// Cache a concurrent, sharded and flexible cache
+type Cache struct {
 	buckets     [shardsNum]map[string]entry
 	mutexes     [shardsNum]sync.Mutex
 	expiration  int64
 	autocleanup int64
 }
 
-// NewFlache creates empty Flache
-func NewFlache(expiration, autocleanup time.Duration) *Flache {
-	f := NewStaticFlache()
+// NewCache creates empty Cache
+func NewCache(expiration, autocleanup time.Duration) *Cache {
+	f := NewStaticCache()
 	f.expiration = int64(expiration)
 	f.autocleanup = int64(autocleanup)
 
@@ -39,9 +40,9 @@ func NewFlache(expiration, autocleanup time.Duration) *Flache {
 	return f
 }
 
-// NewStaticFlache creates empty Flache without any time setups
-func NewStaticFlache() *Flache {
-	f := Flache{}
+// NewStaticCache creates empty Cache without any time setups
+func NewStaticCache() *Cache {
+	f := Cache{}
 	for i := uint64(0); i < shardsNum; i++ {
 		f.buckets[i] = make(map[string]entry)
 		f.mutexes[i] = sync.Mutex{}
@@ -50,12 +51,12 @@ func NewStaticFlache() *Flache {
 }
 
 // Add adds key-value in to the cache for a predefined time
-func (f *Flache) Add(key string, value interface{}) {
+func (f *Cache) Add(key string, value interface{}) {
 	f.AddExt(key, value, time.Duration(f.expiration))
 }
 
 // AddExt adds key-value in to the cache for a specified time
-func (f *Flache) AddExt(key string, value interface{}, duration time.Duration) {
+func (f *Cache) AddExt(key string, value interface{}, duration time.Duration) {
 	now := time.Now().UnixNano()
 	index := f.hash(key) & shardsMask
 
@@ -67,7 +68,7 @@ func (f *Flache) AddExt(key string, value interface{}, duration time.Duration) {
 }
 
 // Check returns state of an object for a given key
-func (f *Flache) Check(key string) (exists, alive bool) {
+func (f *Cache) Check(key string) (exists, alive bool) {
 	index := f.hash(key) & shardsMask
 
 	f.mutexes[index].Lock()
@@ -81,7 +82,7 @@ func (f *Flache) Check(key string) (exists, alive bool) {
 }
 
 // Has returns true if value for key is in the cache and not expired
-func (f *Flache) Has(key string) bool {
+func (f *Cache) Has(key string) bool {
 	index := f.hash(key) & shardsMask
 
 	f.mutexes[index].Lock()
@@ -94,7 +95,7 @@ func (f *Flache) Has(key string) bool {
 }
 
 // HasExt returns true(and duration) if value for key is in the cache and not expired
-func (f *Flache) HasExt(key string) (time.Duration, bool) {
+func (f *Cache) HasExt(key string) (time.Duration, bool) {
 	index := f.hash(key) & shardsMask
 
 	f.mutexes[index].Lock()
@@ -109,21 +110,8 @@ func (f *Flache) HasExt(key string) (time.Duration, bool) {
 	return 0, false
 }
 
-// HasStrict returns true if object is in the cache, even expired
-func (f *Flache) HasStrict(key string) bool {
-	index := f.hash(key) & shardsMask
-
-	f.mutexes[index].Lock()
-	//
-	_, ok := f.buckets[index][key]
-	//
-	f.mutexes[index].Unlock()
-
-	return ok
-}
-
 // Get returns value for a `key` if it's not expired yet
-func (f *Flache) Get(key string) (interface{}, time.Duration, bool) {
+func (f *Cache) Get(key string) (interface{}, time.Duration, bool) {
 	index := f.hash(key) & shardsMask
 
 	f.mutexes[index].Lock()
@@ -140,7 +128,7 @@ func (f *Flache) Get(key string) (interface{}, time.Duration, bool) {
 }
 
 // GetUpd returns value for a `key` if it's not expired yet and updates expiration time for the `key`
-func (f *Flache) GetUpd(key string) (interface{}, time.Duration, bool) {
+func (f *Cache) GetUpd(key string) (interface{}, time.Duration, bool) {
 	index := f.hash(key) & shardsMask
 
 	f.mutexes[index].Lock()
@@ -160,8 +148,33 @@ func (f *Flache) GetUpd(key string) (interface{}, time.Duration, bool) {
 	return zero, 0, false
 }
 
+// Gets returns values for a `keys` if it's not expired yet
+func (f *Cache) Gets(keys ...string) ([]interface{}) {
+	size := len(keys)
+	res := make([]interface{}, size)
+	now := time.Now().UnixNano()
+
+	for i := 0; i < size; i++ {
+		index := f.hash(keys[i]) & shardsMask
+
+		f.mutexes[index].Lock()
+		//
+		value, ok := f.buckets[index][keys[i]]
+		//
+		f.mutexes[index].Unlock()
+
+		if ok && value.Expiration >= now {
+			res[i] = value.Value
+		} else {
+			res[i] = nil
+		}
+	}
+
+	return res
+}
+
 // Del removes `key` from the cache
-func (f *Flache) Del(key string) {
+func (f *Cache) Del(key string) {
 	index := f.hash(key) & shardsMask
 
 	f.mutexes[index].Lock()
@@ -171,8 +184,23 @@ func (f *Flache) Del(key string) {
 	f.mutexes[index].Unlock()
 }
 
+// Dels removes `keys` from the cache
+func (f *Cache) Dels(keys ...string) {
+	size := len(keys)
+
+	for i := 0; i < size; i++ {
+		index := f.hash(keys[i]) & shardsMask
+
+		f.mutexes[index].Lock()
+		//
+		delete(f.buckets[index], keys[i])
+		//
+		f.mutexes[index].Unlock()
+	}
+}
+
 // Set updates value for a `key` but do not touches expiration time
-func (f *Flache) Set(key string, value interface{}) {
+func (f *Cache) Set(key string, value interface{}) {
 	expiration := f.expiration
 	index := f.hash(key) & shardsMask
 
@@ -188,7 +216,7 @@ func (f *Flache) Set(key string, value interface{}) {
 }
 
 // Touch updates expiration time for the `key`
-func (f *Flache) Touch(key string) {
+func (f *Cache) Touch(key string) {
 	if f.expiration == 0 {
 		return
 	}
@@ -205,8 +233,31 @@ func (f *Flache) Touch(key string) {
 	f.mutexes[index].Unlock()
 }
 
+// Touches updates expiration time for the `key`
+func (f *Cache) Touches(keys ...string) {
+	if f.expiration == 0 {
+		return
+	}
+	size := len(keys)
+	now := time.Now().UnixNano()
+
+	for i := 0; i < size; i++ {
+		index := f.hash(keys[i]) & shardsMask
+
+		f.mutexes[index].Lock()
+		//
+		value, ok := f.buckets[index][keys[i]]
+		if ok {
+			value.Expiration = f.expiration + now
+			f.buckets[index][keys[i]] = value
+		}
+		//
+		f.mutexes[index].Unlock()
+	}
+}
+
 // Keys returns slice of all non-expired keys
-func (f *Flache) Keys() []string {
+func (f *Cache) Keys() []string {
 	var res []string
 	for i := uint64(0); i < shardsNum; i++ {
 		now := time.Now().UnixNano()
@@ -225,7 +276,7 @@ func (f *Flache) Keys() []string {
 }
 
 // Values returns slice of all non-expired values
-func (f *Flache) Values() []interface{} {
+func (f *Cache) Values() []interface{} {
 	var res []interface{}
 	for i := uint64(0); i < shardsNum; i++ {
 		now := time.Now().UnixNano()
@@ -244,7 +295,7 @@ func (f *Flache) Values() []interface{} {
 }
 
 // Purge removes expired entries from shard
-func (f *Flache) Purge() {
+func (f *Cache) Purge() {
 	if f.expiration == 0 {
 		return
 	}
@@ -266,7 +317,7 @@ func (f *Flache) Purge() {
 }
 
 // Clear removes all values from a cache
-func (f *Flache) Clear() {
+func (f *Cache) Clear() {
 	for i := uint64(0); i < shardsNum; i++ {
 		f.mutexes[i].Lock()
 		//
@@ -277,7 +328,7 @@ func (f *Flache) Clear() {
 }
 
 // Size returns amount of not expired objects
-func (f *Flache) Size() int64 {
+func (f *Cache) Size() int64 {
 	var res int64
 	ch := make(chan int64, shardsNum)
 
@@ -310,7 +361,7 @@ func (f *Flache) Size() int64 {
 }
 
 // hash return hash of key, FNV-1 algorithm
-func (f *Flache) hash(key string) uint64 {
+func (f *Cache) hash(key string) uint64 {
 	hash := uint64(14695981039346656037)
 	for _, c := range key {
 		hash *= 1099511628211
