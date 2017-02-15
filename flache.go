@@ -17,6 +17,27 @@ type entry struct {
 	Value      interface{}
 }
 
+type Cacher interface {
+	Add(string, interface{})
+	AddExt(string, interface{}, time.Duration)
+	Check(string) (bool, bool)
+	Has(string)
+	HasExt(string) (interface{}, time.Duration, bool)
+	Get(string) (interface{})
+	GetExt(string) (interface{}, time.Duration, bool)
+	Gets(...string) []interface{}
+	Del(string)
+	Dels(...string)
+	Set(string, interface{})
+	Touch(string)
+	Touchs(...string)
+	Keys() []string
+	Values() []interface{}
+	Purge()
+	Clear()
+	Size() int64
+}
+
 // Cache a concurrent, sharded and flexible cache
 type Cache struct {
 	buckets     [shardsNum]map[string]entry
