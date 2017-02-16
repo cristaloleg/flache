@@ -3,25 +3,29 @@ package flache
 import (
 	"testing"
 	"time"
+	"sync"
 )
 
 var value interface{}
 var left time.Duration
 var ok bool
+var wg sync.WaitGroup
 
 func TestNewCache(t *testing.T) {
-	Cache := NewCache(10*time.Second, 100*time.Second)
-	if Cache == nil {
-		t.Error("`Cache` should be instantiated")
+	cache := NewCache(10*time.Second, 100*time.Second)
+	if cache == nil {
+		t.Error("`cache` should be instantiated")
 	}
+	check := func(Cacher) {}
+	check(cache)
 
-	Cache.AddExt("key1", "value1", time.Duration(10)*time.Second)
+	cache.AddExt("key1", "value1", time.Duration(10)*time.Second)
 
-	if !Cache.Has("key1") {
+	if !cache.Has("key1") {
 		t.Error("Should have `key1`")
 	}
 
-	value, left, ok = Cache.Get("key1")
+	value, left, ok = cache.GetExt("key1")
 	if !ok || value != "value1" || left == 0 {
 		t.Error("Should have `key1` with proper value")
 	}
@@ -68,21 +72,21 @@ func TestCache_GetSet(t *testing.T) {
 	cache := NewCache(time.Duration(100)*time.Millisecond, time.Duration(100)*time.Millisecond)
 
 	cache.AddExt("key2", 123, time.Duration(10)*time.Millisecond)
-	value, left, ok = cache.Get("key2")
+	value, left, ok = cache.GetExt("key2")
 	if !ok || value != 123 || left == 0 {
 		t.Error("Should have `key2` value")
 	}
 
 	cache.Set("key2", "123")
 
-	value, left, ok = cache.Get("key2")
+	value, left, ok = cache.GetExt("key2")
 	if !ok || value != "123" {
 		t.Error("Should have `key2` value")
 	}
 
 	<-time.After(10 * time.Millisecond)
 
-	value, left, ok = cache.Get("key2")
+	value, left, ok = cache.GetExt("key2")
 	if ok || value != nil || left != 0 {
 		t.Error("Should not have `key2` anymore")
 	}
@@ -121,4 +125,33 @@ func TestCache_Concurrent(t *testing.T) {
 	go func() {
 		cache.AddExt("key", 321, time.Duration(1))
 	}()
+}
+
+func BenchmarkCache10K(b *testing.B) {
+	cache := NewStaticCache()
+
+	if cache == nil {
+		b.Error("Should be instantiated")
+	}
+
+	go readFromCache(1, cache)
+	go writeToCache(1, cache)
+
+	wg.Wait()
+}
+
+func readFromCache(n int64, c *Cache) {
+	wg.Add(1)
+	for i := int64(0); i < n; i++ {
+		c.Get("")
+	}
+	wg.Done()
+}
+
+func writeToCache(n int64, c *Cache) {
+	wg.Add(1)
+	for i := int64(0); i < n; i++ {
+		c.Add("", "")
+	}
+	wg.Done()
 }

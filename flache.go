@@ -21,8 +21,8 @@ type Cacher interface {
 	Add(string, interface{})
 	AddExt(string, interface{}, time.Duration)
 	Check(string) (bool, bool)
-	Has(string)
-	HasExt(string) (interface{}, time.Duration, bool)
+	Has(string) bool
+	HasExt(string) (time.Duration, bool)
 	Get(string) (interface{})
 	GetExt(string) (interface{}, time.Duration, bool)
 	Gets(...string) []interface{}
@@ -132,7 +132,23 @@ func (f *Cache) HasExt(key string) (time.Duration, bool) {
 }
 
 // Get returns value for a `key` if it's not expired yet
-func (f *Cache) Get(key string) (interface{}, time.Duration, bool) {
+func (f *Cache) Get(key string) (interface{}) {
+	index := f.hash(key) & shardsMask
+
+	f.mutexes[index].Lock()
+	//
+	value, ok := f.buckets[index][key]
+	//
+	f.mutexes[index].Unlock()
+
+	if ok && (f.expiration == 0 || value.Expiration > time.Now().UnixNano()) {
+		return value.Value
+	}
+	return nil
+}
+
+// GetExt returrns value, time and bool for a `key` if it's not expired yet
+func (f *Cache) GetExt(key string) (interface{}, time.Duration, bool) {
 	index := f.hash(key) & shardsMask
 
 	f.mutexes[index].Lock()
@@ -255,7 +271,7 @@ func (f *Cache) Touch(key string) {
 }
 
 // Touches updates expiration time for the `key`
-func (f *Cache) Touches(keys ...string) {
+func (f *Cache) Touchs(keys ...string) {
 	if f.expiration == 0 {
 		return
 	}
