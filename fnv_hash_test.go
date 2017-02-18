@@ -1,8 +1,8 @@
 package flache
 
 import (
-	"testing"
 	"hash/fnv"
+	"testing"
 )
 
 const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

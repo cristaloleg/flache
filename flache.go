@@ -24,7 +24,7 @@ type Cacher interface {
 	Check(string) (bool, bool)
 	Has(string) bool
 	HasExt(string) (time.Duration, bool)
-	Get(string) (interface{})
+	Get(string) interface{}
 	GetExt(string) (interface{}, time.Duration, bool)
 	Gets(...string) []interface{}
 	Del(string)
@@ -133,7 +133,7 @@ func (f *Cache) HasExt(key string) (time.Duration, bool) {
 }
 
 // Get returns value for a `key` if it's not expired yet
-func (f *Cache) Get(key string) (interface{}) {
+func (f *Cache) Get(key string) interface{} {
 	index := fnvHash(key) & shardsMask
 
 	f.mutexes[index].Lock()
@@ -187,7 +187,7 @@ func (f *Cache) GetUpd(key string) (interface{}, time.Duration, bool) {
 }
 
 // Gets returns values for a `keys` if it's not expired yet
-func (f *Cache) Gets(keys ...string) ([]interface{}) {
+func (f *Cache) Gets(keys ...string) []interface{} {
 	size := len(keys)
 	res := make([]interface{}, size)
 	now := time.Now().UnixNano()

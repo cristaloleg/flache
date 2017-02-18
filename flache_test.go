@@ -1,9 +1,9 @@
 package flache
 
 import (
+	"sync"
 	"testing"
 	"time"
-	"sync"
 )
 
 var value interface{}
