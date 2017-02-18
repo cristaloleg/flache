@@ -17,6 +17,7 @@ type entry struct {
 	Value      interface{}
 }
 
+// Cacher cache interface
 type Cacher interface {
 	Add(string, interface{})
 	AddExt(string, interface{}, time.Duration)
@@ -270,7 +271,7 @@ func (f *Cache) Touch(key string) {
 	f.mutexes[index].Unlock()
 }
 
-// Touches updates expiration time for the `key`
+// Touchs updates expiration time for the `key`
 func (f *Cache) Touchs(keys ...string) {
 	if f.expiration == 0 {
 		return

@@ -18,7 +18,7 @@ func TestCache_Hash(t *testing.T) {
 		expected := stdFnvHash.Sum64()
 		actual := fnvHash(test)
 		if actual != expected {
-			t.Errorf("%s expected %s but was %s", test, expected, actual)
+			t.Errorf("%s expected %d but was %d", test, expected, actual)
 		}
 	}
 }
