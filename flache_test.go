@@ -6,11 +6,6 @@ import (
 	"time"
 )
 
-var value interface{}
-var left time.Duration
-var ok bool
-var wg sync.WaitGroup
-
 func TestNewCache(t *testing.T) {
 	cache := NewCache(10*time.Second, 100*time.Second)
 	if cache == nil {
@@ -25,7 +20,7 @@ func TestNewCache(t *testing.T) {
 		t.Error("Should have `key1`")
 	}
 
-	value, left, ok = cache.GetExt("key1")
+	value, left, ok := cache.GetExt("key1")
 	if !ok || value != "value1" || left == 0 {
 		t.Error("Should have `key1` with proper value")
 	}
@@ -72,7 +67,7 @@ func TestCache_GetSet(t *testing.T) {
 	cache := NewCache(time.Duration(100)*time.Millisecond, time.Duration(100)*time.Millisecond)
 
 	cache.AddExt("key2", 123, time.Duration(10)*time.Millisecond)
-	value, left, ok = cache.GetExt("key2")
+	value, left, ok := cache.GetExt("key2")
 	if !ok || value != 123 || left == 0 {
 		t.Error("Should have `key2` value")
 	}
@@ -98,10 +93,6 @@ func TestCache_Default(t *testing.T) {
 	if !cache.Has("key1") {
 		t.Error("Should have `key1`")
 	}
-	//value, life, ok := cache.GetWithTime()
-	//if !ok || value != 123 || time == 0 {
-	//	t.Error("Should ")
-	//}
 
 	<-time.After(time.Duration(cache.expiration))
 
@@ -133,14 +124,15 @@ func BenchmarkCache10K(b *testing.B) {
 	if cache == nil {
 		b.Error("Should be instantiated")
 	}
+	var wg sync.WaitGroup
 
-	go readFromCache(1, cache)
-	go writeToCache(1, cache)
+	go readFromCache(1, &wg, cache)
+	go writeToCache(1, &wg, cache)
 
 	wg.Wait()
 }
 
-func readFromCache(n int64, c *Cache) {
+func readFromCache(n int64, wg *sync.WaitGroup, c *Cache) {
 	wg.Add(1)
 	for i := int64(0); i < n; i++ {
 		c.Get("")
@@ -148,7 +140,7 @@ func readFromCache(n int64, c *Cache) {
 	wg.Done()
 }
 
-func writeToCache(n int64, c *Cache) {
+func writeToCache(n int64, wg *sync.WaitGroup, c *Cache) {
 	wg.Add(1)
 	for i := int64(0); i < n; i++ {
 		c.Add("", "")

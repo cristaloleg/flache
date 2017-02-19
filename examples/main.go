@@ -1,20 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"github.com/cristaloleg/flache"
-	"net"
 	"net/http"
 )
 
-var tcpCache flache.Cacher
+var cache flache.Cacher
 
 func main() {
-	go tcpListen()
-	go httpListen()
-}
-
-func httpListen() {
 	http.HandleFunc("/", handleHTTPConnection)
 	http.ListenAndServe(":8080", nil)
 }
@@ -22,39 +15,45 @@ func httpListen() {
 func handleHTTPConnection(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-	case "PUT":
-	case "HEAD":
-	}
-	//fmt.Fprintf(w, "Hi there, I love %s!", r.URL.Path[1:])
-}
-
-func tcpListen() {
-	ln, err := net.Listen("tcp", ":8080")
-	if err != nil {
-		panic(err)
-	}
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			fmt.Printf("Something bad happend: %s", err)
+		key := r.Form.Get("key")
+		if key == "" {
+			return
 		}
-		go handleTCPConnection(conn)
-	}
-}
+		value, _, ok := cache.GetExt(key)
+		if !ok {
+			return
+		}
+		if _, ok2 := value.(string); ok2 {
+			w.Write(value.([]byte))
+		} else if _, ok2 := value.([]byte); ok2 {
+			w.Write(value.([]byte))
+		}
 
-func handleTCPConnection(conn net.Conn) {
-	var buffer []byte
-	n, err := conn.Read(buffer)
-	if err != nil || n <= 0 {
-		return
-	}
-	switch buffer[0] {
-	case 1:
-		// add
-	case 2:
-		// put
-	case 3:
-		// check
-	}
+	case "PUT":
+		key := r.Form.Get("key")
+		if key == "" {
+			return
+		}
+		value := r.Form.Get("value")
+		if value == "" {
+			return
+		}
+		cache.Add(key, value)
 
+	case "HEAD":
+		key := r.Form.Get("key")
+		if key == "" {
+			return
+		}
+		exists, alive := cache.Check(key)
+
+		res := []byte{0, 0}
+		if exists {
+			res[0] = 1
+		}
+		if alive {
+			res[1] = 1
+		}
+		w.Write(res)
+	}
 }
