@@ -129,7 +129,7 @@ func TestConcurrent(t *testing.T) {
 
 				val := cache.Get(keys[j])
 				if val == nil || val.(int) != j {
-					t.Error("For %s expected %d but was %d", keys[j], val.(int), j)
+					t.Errorf("For %s expected %d but was %d", keys[j], val.(int), j)
 				}
 			}
 			done <- struct{}{}
@@ -203,8 +203,8 @@ func BenchmarkCache10K(b *testing.B) {
 	keys := randStrings(size)
 
 	for i := 0; i < writeThreads; i++ {
+		wg.Add(1)
 		go func(wg *sync.WaitGroup, c *Cache) {
-			wg.Add(1)
 			for i := 0; i < size; i++ {
 				c.Add(keys[i], i)
 			}
@@ -214,8 +214,8 @@ func BenchmarkCache10K(b *testing.B) {
 
 	for i := 0; i < readThreads; i++ {
 
+		wg.Add(1)
 		go func(lwg *sync.WaitGroup, c *Cache) {
-			wg.Add(1)
 			for i := 0; i < size; i++ {
 				_ = c.Get(keys[i])
 			}
