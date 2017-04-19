@@ -28,6 +28,7 @@ type Cacher interface {
 	Check(string) (bool, bool)
 	Has(string) bool
 	HasExt(string) (time.Duration, bool)
+	HasEntry(string, interface{}) bool
 	Get(string) interface{}
 	GetExt(string) (interface{}, time.Duration, bool)
 	Gets(...string) []interface{}
@@ -133,6 +134,22 @@ func (f *Cache) HasExt(key string) (time.Duration, bool) {
 		return time.Duration(value.Expiration), true
 	}
 	return 0, false
+}
+
+// HasEntry returns true if key and value are presented in cache
+func (f *Cache) HasEntry(key string, value interface{}) bool {
+	index := fnvHash(key) & shardsMask
+
+	f.mutexes[index].Lock()
+	//
+	val, ok := f.buckets[index][key]
+	//
+	f.mutexes[index].Unlock()
+
+	if ok && val == value {
+		return true
+	}
+	return false
 }
 
 // Get returns value for a `key` if it's not expired yet
