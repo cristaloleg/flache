@@ -71,7 +71,6 @@ func NewStaticCache() *Cache {
 	f := Cache{}
 	for i := uint64(0); i < shardsNum; i++ {
 		f.buckets[i] = make(map[string]entry)
-		f.mutexes[i] = sync.Mutex{}
 	}
 	return &f
 }
