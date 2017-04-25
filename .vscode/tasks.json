@@ -1,0 +1,50 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "0.1.0",
+    "showOutput": "always",
+    "tasks": [
+        {
+            "taskName": "go run",
+            "command": "make",
+            "args": ["run"],
+            "isShellCommand": true
+        },
+        {
+            "taskName": "go build",
+            "command": "make",
+            "args": ["build"],
+            "isShellCommand": true
+        },
+        {
+            "taskName": "go bench",
+            "command": "make",
+            "args": ["bench"],
+            "isShellCommand": true
+        },
+        {
+            "taskName": "go test",
+            "command": "make",
+            "args": ["test"],
+            "isShellCommand": true
+        },
+        {
+            "taskName": "go race",
+            "command": "make",
+            "args": ["race"],
+            "isShellCommand": true
+        },
+        {
+            "taskName": "go cpuprof",
+            "command": "make",
+            "args": ["cpuprof"],
+            "isShellCommand": true
+        },
+        {
+            "taskName": "go memprof",
+            "command": "make",
+            "args": ["memprof"],
+            "isShellCommand": true
+        }
+    ]
+}
