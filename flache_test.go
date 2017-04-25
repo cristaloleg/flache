@@ -26,8 +26,8 @@ func TestNewCache(t *testing.T) {
 		t.Error("Should have `key1`")
 	}
 
-	value, left, ok := cache.GetExt("key1")
-	if !ok || value != "value1" || left == 0 {
+	value, timeLeft, ok := cache.GetExt("key1")
+	if !ok || value != "value1" || timeLeft == 0 {
 		t.Error("Should have `key1` with proper value")
 	}
 }
@@ -73,22 +73,22 @@ func TestGetSet(t *testing.T) {
 	cache := NewCache(time.Duration(100)*time.Millisecond, time.Duration(100)*time.Millisecond)
 
 	cache.AddExt("key2", 123, time.Duration(10)*time.Millisecond)
-	value, left, ok := cache.GetExt("key2")
-	if !ok || value != 123 || left == 0 {
+	value, timeLeft, ok := cache.GetExt("key2")
+	if !ok || value != 123 || timeLeft == 0 {
 		t.Error("Should have `key2` value")
 	}
 
 	cache.Set("key2", "123")
 
-	value, left, ok = cache.GetExt("key2")
-	if !ok || value != "123" || left != 123 {
+	value, _, ok = cache.GetExt("key2")
+	if !ok || value != "123" || timeLeft == 0 {
 		t.Error("Should have `key2` value")
 	}
 
 	<-time.After(10 * time.Millisecond)
 
-	value, left, ok = cache.GetExt("key2")
-	if ok || value != nil || left != 0 {
+	value, timeLeft, ok = cache.GetExt("key2")
+	if ok || value != nil || timeLeft != 0 {
 		t.Error("Should not have `key2` anymore")
 	}
 }
