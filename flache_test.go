@@ -81,7 +81,7 @@ func TestGetSet(t *testing.T) {
 	cache.Set("key2", "123")
 
 	value, left, ok = cache.GetExt("key2")
-	if !ok || value != "123" {
+	if !ok || value != "123" || left != 123 {
 		t.Error("Should have `key2` value")
 	}
 
@@ -151,7 +151,10 @@ func TestHash(t *testing.T) {
 
 	for _, test := range testCases {
 		stdFnvHash.Reset()
-		stdFnvHash.Write([]byte(test))
+		_, err := stdFnvHash.Write([]byte(test))
+		if err != nil {
+			t.Errorf("something bad happend %v", err)
+		}
 
 		expected := stdFnvHash.Sum64()
 		actual := fnvHash(test)
