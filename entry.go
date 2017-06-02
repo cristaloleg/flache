@@ -11,5 +11,5 @@ type entry struct {
 }
 
 func (e *entry) IsAlive() bool {
-	return time.Now().UnixNano() < e.Expiration
+	return e.Expiration == 0 || e.Expiration > time.Now().UnixNano()
 }
