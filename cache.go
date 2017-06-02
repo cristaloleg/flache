@@ -14,7 +14,7 @@ func newCache() *cache {
 	return c
 }
 
-func (c *cache) add(key string, value interface{}) {
+func (c *cache) Add(key string, value interface{}) {
 	c.Lock()
 	//
 	c.entries[key] = entry{
@@ -24,16 +24,17 @@ func (c *cache) add(key string, value interface{}) {
 	c.Unlock()
 }
 
-func (c *cache) has(key string) bool {
+func (c *cache) Has(key string) bool {
 	c.Lock()
 	//
 	_, ok := c.entries[key]
 	//
 	c.Unlock()
+
 	return ok
 }
 
-func (c *cache) del(key string) {
+func (c *cache) Del(key string) {
 	c.Lock()
 	//
 	delete(c.entries, key)
@@ -41,7 +42,7 @@ func (c *cache) del(key string) {
 	c.Unlock()
 }
 
-func (c *cache) keys() []string {
+func (c *cache) Keys() []string {
 	c.Lock()
 	//
 	keys := make([]string, len(c.entries))
@@ -52,10 +53,11 @@ func (c *cache) keys() []string {
 	}
 	//
 	c.Unlock()
+
 	return keys
 }
 
-func (c *cache) clear() {
+func (c *cache) Clear() {
 	c.Lock()
 	//
 	c.entries = make(map[string]entry)
@@ -63,11 +65,12 @@ func (c *cache) clear() {
 	c.Unlock()
 }
 
-func (c *cache) size() int {
+func (c *cache) Size() int {
 	c.Lock()
 	//
 	size := len(c.entries)
 	//
 	c.Unlock()
+
 	return size
 }

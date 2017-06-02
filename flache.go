@@ -56,26 +56,26 @@ func getIndex(key string) uint64 {
 // Add adds key-value to the cache
 func (f *Flache) Add(key string, value interface{}) {
 	index := getIndex(key)
-	f.shards[index].add(key, value)
+	f.shards[index].Add(key, value)
 }
 
 // Has returns true if key is present, false otherwise
 func (f *Flache) Has(key string) bool {
 	index := getIndex(key)
-	return f.shards[index].has(key)
+	return f.shards[index].Has(key)
 }
 
 // Del deletes key-value from the cache
 func (f *Flache) Del(key string) {
 	index := getIndex(key)
-	f.shards[index].del(key)
+	f.shards[index].Del(key)
 }
 
 // Keys returns all keys inside the cache
 func (f *Flache) Keys() []string {
 	var keys []string
 	for i := 0; i < shardsNum; i++ {
-		keys = append(keys, f.shards[i].keys()...)
+		keys = append(keys, f.shards[i].Keys()...)
 	}
 	return keys
 }
@@ -84,7 +84,7 @@ func (f *Flache) Keys() []string {
 func (f *Flache) Size() int {
 	size := 0
 	for i := 0; i < shardsNum; i++ {
-		size += f.shards[i].size()
+		size += f.shards[i].Size()
 	}
 	return size
 }
